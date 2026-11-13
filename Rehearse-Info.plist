@@ -18,6 +18,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Rehearse uses your front-facing camera to provide a live self-view during mock interview calls.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Rehearse uses your microphone to transcribe and evaluate your spoken interview answers.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

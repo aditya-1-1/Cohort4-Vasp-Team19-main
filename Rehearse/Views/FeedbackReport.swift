@@ -25,12 +25,14 @@ struct FeedbackReport<PracticeAction: View>: View {
         case scoring
         case area(AreaScore)
         case answer(OpenQuestion)
+        case summary
 
         var id: String {
             switch self {
             case .scoring: "scoring"
             case .area(let area): "area-\(area.id)"
             case .answer(let open): "answer-\(open.id)"
+            case .summary: "summary"
             }
         }
     }
@@ -41,7 +43,7 @@ struct FeedbackReport<PracticeAction: View>: View {
                 switch page {
                 case .overview:
                     resultCard(feedback)
-                    aiSummaryCard
+                    summaryButton
                     SectionTitle(title: "Score Breakdown")
                     breakdownCard(feedback)
                     answersLink(feedback)
@@ -72,6 +74,20 @@ struct FeedbackReport<PracticeAction: View>: View {
                     NavigationStack {
                         AnswerReviewView(number: open.number, entry: open.entry, focus: open.focus, areas: open.areas)
                     }
+                case .summary:
+                    if let summary = summaryText {
+                        let evalRes = rehearsal.evaluation?.evaluation_result
+                        NavigationStack {
+                            EvaluationSummarySheet(
+                                summary: summary,
+                                whatWentWell: evalRes?.feedback.what_went_well,
+                                whatToImprove: evalRes?.feedback.what_to_improve,
+                                followUp: (evalRes?.follow_up.needed == true) ? evalRes?.follow_up.question : nil
+                            )
+                        }
+                        .presentationDetents([.medium, .large])
+                        .presentationBackground(AppTheme.background)
+                    }
                 }
             }
             .sheet(isPresented: $showsShareSheet) {
@@ -87,6 +103,7 @@ struct FeedbackReport<PracticeAction: View>: View {
                 let arguments = ProcessInfo.processInfo.arguments
                 try? await Task.sleep(for: .seconds(0.6))
                 if arguments.contains("-scoring") { sheet = .scoring }
+                if arguments.contains("-summarySheet") { sheet = .summary }
                 if let index = arguments.firstIndex(of: "-part"), arguments.indices.contains(index + 1),
                    let number = Int(arguments[index + 1]), feedback.areas.indices.contains(number) {
                     sheet = .area(feedback.areas[number])
@@ -154,60 +171,50 @@ struct FeedbackReport<PracticeAction: View>: View {
         .padding(.bottom, AppTheme.Spacing.md)
     }
 
-    // MARK: - AI Summary Card
+    // MARK: - Summary Button & Modal
+
+    private var summaryText: String? {
+        if let evalSummary = rehearsal.evaluation?.evaluation_result.feedback.summary,
+           !evalSummary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return evalSummary
+        }
+        if let s = rehearsal.feedback?.summary,
+           !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return s
+        }
+        return nil
+    }
 
     @ViewBuilder
-    private var aiSummaryCard: some View {
-        if let eval = rehearsal.evaluation {
-            let res = eval.evaluation_result
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                HStack {
-                    Label("Evaluation Summary", systemImage: "sparkles")
-                        .font(.headline)
-                        .foregroundStyle(Color.primary)
-                    Spacer()
-                }
-
-                Text(res.feedback.summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if !res.feedback.what_went_well.isEmpty {
-                    HStack(alignment: .top, spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(AppTheme.success)
-                            .font(.caption)
-                        Text(res.feedback.what_went_well)
-                            .font(.footnote)
-                    }
-                }
-
-                if !res.feedback.what_to_improve.isEmpty {
-                    HStack(alignment: .top, spacing: 6) {
-                        Image(systemName: "arrow.up.forward.circle.fill")
-                            .foregroundStyle(AppTheme.brand)
-                            .font(.caption)
-                        Text(res.feedback.what_to_improve)
-                            .font(.footnote)
-                    }
-                }
-
-                if let fq = res.follow_up.question, res.follow_up.needed {
+    private var summaryButton: some View {
+        if summaryText != nil {
+            Button {
+                sheet = .summary
+            } label: {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    Image(systemName: "sparkles")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.brand)
+                        .frame(width: 28)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Recommended Follow-up Question:")
-                            .font(.caption.bold())
-                            .foregroundStyle(AppTheme.brand)
-                        Text(fq)
-                            .font(.caption)
+                        Text("Interview Summary")
+                            .font(.headline)
+                            .foregroundStyle(Color.primary)
+                        Text("Tap to view full assessment & takeaways")
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
-                    .padding(8)
-                    .background(AppTheme.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    Spacer(minLength: AppTheme.Spacing.xs)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
+                .padding(AppTheme.Spacing.md)
+                .cardBackground()
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
             }
-            .padding(AppTheme.Spacing.md)
-            .cardBackground()
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+            .buttonStyle(.plain)
         }
     }
 
@@ -723,6 +730,86 @@ struct RehearsalDetailView: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
+    }
+}
+
+struct EvaluationSummarySheet: View {
+    let summary: String
+    let whatWentWell: String?
+    let whatToImprove: String?
+    let followUp: String?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                    Label("Overall Assessment", systemImage: "sparkles")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.brand)
+                    Text(summary)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(AppTheme.Spacing.md)
+                .cardBackground()
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+
+                if let well = whatWentWell, !well.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                        Label("What Went Well", systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.success)
+                        Text(well)
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(AppTheme.Spacing.md)
+                    .cardBackground()
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+                }
+
+                if let improve = whatToImprove, !improve.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                        Label("What to Improve", systemImage: "arrow.up.forward.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.brand)
+                        Text(improve)
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(AppTheme.Spacing.md)
+                    .cardBackground()
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+                }
+
+                if let followUp = followUp, !followUp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                        Label("Recommended Follow-up Question", systemImage: "questionmark.bubble.fill")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.brand)
+                        Text(followUp)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(AppTheme.Spacing.md)
+                    .background(AppTheme.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: AppTheme.Radius.card))
+                }
+            }
+            .padding(AppTheme.Spacing.md)
+        }
+        .background(AppTheme.background)
+        .navigationTitle("Interview Summary")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
     }
 }
 

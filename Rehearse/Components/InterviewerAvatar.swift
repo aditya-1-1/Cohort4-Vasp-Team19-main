@@ -88,39 +88,58 @@ struct SelfViewTile: View {
     /// While the candidate is answering.
     let isTalking: Bool
     let isCameraOn: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject private var cameraManager = CameraManager.shared
 
-    static let size = CGSize(width: 92, height: 124)
+    static let size = CGSize(width: 96, height: 130)
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || !isCameraOn)) { timeline in
-            let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-            ZStack {
-                if isCameraOn {
-                    // A plain wall at home, lit from a window on the left.
-                    LinearGradient(colors: [Color(rgb: 0xDCD3C6), Color(rgb: 0xBDB2A3)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    // Head and shoulders, framed close, as a front camera does.
-                    InterviewerFigure(mood: isTalking ? .asking : .waiting, t: t + 7, look: .candidate)
-                        .frame(width: 140, height: 140)
-                        .offset(y: 6)
+        ZStack {
+            if isCameraOn {
+                if cameraManager.permissionGranted && cameraManager.isAvailable {
+                    CameraPreviewView()
+                        .frame(width: Self.size.width, height: Self.size.height)
+                        .clipped()
                 } else {
-                    Color(rgb: 0x2C2C2E)
-                    Image(systemName: "video.slash.fill")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.75))
+                    // Camera standby / candidate video preview tile
+                    LinearGradient(
+                        colors: [Color(rgb: 0x343438), Color(rgb: 0x1E1E22)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    VStack(spacing: 6) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 38))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Text("You")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
                 }
+            } else {
+                Color(rgb: 0x2C2C2E)
+                Image(systemName: "video.slash.fill")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.75))
             }
-            .frame(width: Self.size.width, height: Self.size.height)
         }
+        .frame(width: Self.size.width, height: Self.size.height)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(.white.opacity(0.25), lineWidth: 0.5)
+                .strokeBorder(isTalking ? AppTheme.brand : Color.white.opacity(0.3), lineWidth: isTalking ? 2 : 0.8)
         }
         .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
         .animation(.smooth(duration: 0.25), value: isCameraOn)
+        .onAppear {
+            if isCameraOn {
+                cameraManager.checkPermissionsAndStart()
+            }
+        }
+        .onDisappear {
+            cameraManager.stopSession()
+        }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(isCameraOn ? "Your camera" : "Your camera is off")
+        .accessibilityLabel(isCameraOn ? "Live Camera" : "Your camera is off")
     }
 }
 
