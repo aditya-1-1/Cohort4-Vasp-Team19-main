@@ -1,0 +1,151 @@
+import SwiftUI
+
+/// The candidate, how ready they are, what they're preparing for and how
+/// feedback should feel. Laid out like Settings: grouped rows, one job each.
+struct ProfileView: View {
+    @Environment(AppState.self) private var appState
+    @State private var isConfirmingSignOut = false
+    @State private var isConfirmingDelete = false
+    @State private var viewModel = ProfileViewModel()
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        @Bindable var appState = appState
+
+        List {
+            TabHeaderSection()
+
+            Section {
+                header
+            }
+
+            Section {
+                LabeledContent {
+                    Text(appState.experienceLevel)
+                } label: {
+                    Label("Experience Level", systemImage: "graduationcap")
+                }
+            } footer: {
+                Text("Questions are picked for your experience level.")
+            }
+
+            Section {
+                Toggle(isOn: $appState.flagsFillerWords) {
+                    Label("Flag Filler Words", systemImage: "waveform.badge.exclamationmark")
+                }
+            } header: {
+                Text("Feedback")
+                .listHeadingInset()
+            } footer: {
+                Text("Counts “um,” “like” and “you know” in your answers and scores them under Communication.")
+            }
+
+            Section {
+                Toggle(isOn: remindersBinding) {
+                    Label("Interview Reminders", systemImage: "bell.badge")
+                }
+                Link(destination: URL(string: "https://support.apple.com")!) {
+                    Label("Help & Support", systemImage: "questionmark.circle")
+                }
+            } header: {
+                Text("Settings")
+                .listHeadingInset()
+            } footer: {
+                Text("Reminders come 3 days, 1 day and 2 hours before each upcoming interview.")
+            }
+
+            Section {
+                Button("Sign Out", role: .destructive) {
+                    isConfirmingSignOut = true
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // Only a real account can be deleted, as the App Store requires.
+            if appState.account != nil {
+                Section {
+                    Button(role: .destructive) {
+                        isConfirmingDelete = true
+                    } label: {
+                        if viewModel.isDeleting {
+                            ProgressView()
+                        } else {
+                            Text("Delete Account")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .disabled(viewModel.isDeleting)
+                } footer: {
+                    Text("Deletes your account and everything in it: interviews, scores, resumes and collections. This can’t be undone.")
+                }
+            }
+
+            Section {
+                Link(destination: URL(string: "https://github.com/open-interview/open-interview")!) {
+                    Label("Question Bank", systemImage: "books.vertical")
+                }
+            } header: {
+                Text("About")
+                    .listHeadingInset()
+            } footer: {
+                Text("Practice questions come from the open-interview project, used under the MIT licence.")
+            }
+        }
+        .appListStyle()
+        .screenTitle("Profile")
+        .confirmationDialog("Sign out of Rehearse?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
+            Button("Sign Out", role: .destructive) {
+                viewModel.signOut(in: appState)
+            }
+        } message: {
+            Text(viewModel.signOutMessage)
+        }
+        .confirmationDialog("Delete your account?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("Delete Account", role: .destructive) {
+                viewModel.deleteAccount(in: appState)
+            }
+        } message: {
+            Text("Your interviews, scores, resumes and collections will be deleted for good.")
+        }
+        .alert("Notifications Are Off", isPresented: $viewModel.notificationsBlocked) {
+            Button("Open Settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("Allow notifications for Rehearse in Settings to get reminders before your interviews.")
+        }
+        .alert("Couldn’t Delete Your Account", isPresented: Binding(get: { viewModel.deleteError != nil }, set: { if !$0 { viewModel.deleteError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.deleteError ?? "")
+        }
+    }
+
+    /// Turning reminders on asks iOS first; if notifications are blocked,
+    /// the switch stays off and Settings is offered instead.
+    private var remindersBinding: Binding<Bool> {
+        Binding {
+            appState.remindersOn
+        } set: { on in
+            viewModel.setReminders(on, in: appState)
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: AppTheme.Spacing.md) {
+            // The same placeholder as Home's header, larger.
+            ProfileAvatar(size: 64)
+            // Just the name: the interviews and level are listed below.
+            Text(appState.candidateName)
+                .cardTitleStyle()
+        }
+        .padding(.vertical, AppTheme.Spacing.xxs)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+#Preview {
+    NavigationStack { ProfileView() }
+        .environment(AppState())
+}

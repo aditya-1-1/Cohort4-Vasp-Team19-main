@@ -1,0 +1,17 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Secrets & Environment
+.env
+*.env
+backend/.env
+
+# Logs
+*.log
+backend/*.log
