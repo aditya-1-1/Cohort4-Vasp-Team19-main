@@ -13,6 +13,7 @@ struct AnswerReviewView: View {
     let areas: [AreaScore]
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     @State private var openArea: AreaScore?
     /// Kept here, so going back to the answer and into the chat again
     /// keeps the conversation.
@@ -44,6 +45,7 @@ struct AnswerReviewView: View {
                     betterCard
                 }
                 chatLink
+                retakeButton
             }
             .padding(.horizontal, AppTheme.Spacing.md)
             .padding(.vertical, AppTheme.Spacing.sm)
@@ -92,6 +94,49 @@ struct AnswerReviewView: View {
         }
         .buttonStyle(CardButtonStyle())
         .accessibilityHint("Opens a chat about this answer")
+    }
+
+    // MARK: - Re-take Button
+
+    private var retakeButton: some View {
+        Button {
+            let question = appState.library.first { $0.text == entry.question } ?? Question(
+                id: UUID().uuidString,
+                text: entry.question,
+                category: .roleBased,
+                difficulty: .medium,
+                role: appState.targetRole,
+                skills: [focus]
+            )
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                appState.activePractice = question
+            }
+        } label: {
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Image(systemName: "arrow.counterclockwise.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.brand)
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Re-take This Question")
+                        .font(.headline)
+                        .foregroundStyle(Color.primary)
+                    Text("Practice again with coaching insights in mind")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(AppTheme.Spacing.md)
+            .cardBackground()
+        }
+        .buttonStyle(CardButtonStyle())
+        .accessibilityHint("Practices this question again immediately")
     }
 
     // MARK: - Header

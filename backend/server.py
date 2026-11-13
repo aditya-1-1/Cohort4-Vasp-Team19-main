@@ -310,9 +310,34 @@ def call_gemini_evaluation(input_data):
 
     # Formulate prompt with input contract
     input_str = json.dumps(input_data, indent=2)
+    context = (input_data.get("interview_context") or "").lower()
+    company_guidelines = ""
+    if "amazon" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — AMAZON:\n"
+            "- Explicitly evaluate against Amazon's Leadership Principles (Customer Obsession, Ownership, Bias for Action, Dive Deep, Deliver Results).\n"
+            "- In feedback.what_went_well and feedback.what_to_improve, cite which Leadership Principles the candidate demonstrated or failed to embody.\n"
+        )
+    elif "google" in context or "alphabet" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — GOOGLE:\n"
+            "- Explicitly evaluate for General Cognitive Ability (GCA), Googleyness (navigating ambiguity, intellectual humility, doing the right thing), and scalable system thinking.\n"
+        )
+    elif "meta" in context or "facebook" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — META:\n"
+            "- Explicitly evaluate against Meta core values: Move Fast, Focus on Long-Term Impact, Build Awesome Things, and Live in the Future.\n"
+        )
+    elif "apple" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — APPLE:\n"
+            "- Explicitly evaluate for deep attention to detail, user privacy, product intuition, software craftsmanship, and cross-functional empathy.\n"
+        )
+
     user_prompt = (
         f"Evaluate the candidate's answer with senior-level technical discernment and strong reasoning.\n"
-        f"Analyze core principles, concrete mechanisms, edge cases, and architectural trade-offs.\n\n"
+        f"Analyze core principles, concrete mechanisms, edge cases, and architectural trade-offs.\n"
+        f"{company_guidelines}\n"
         f"Input Context:\n{input_str}\n\n"
         f"Respond with strict pure JSON matching schema_version 1.0."
     )

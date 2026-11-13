@@ -72,6 +72,7 @@ nonisolated enum SpeechMeasurer {
         combined.fillerWords = total(answers.map(\.fillerWords))
         combined.longPauses = total(answers.map(\.longPauses))
         combined.hedges = total(answers.map(\.hedges))
+        combined.eyeContactPercent = average(answers.compactMap(\.eyeContactPercent).map(Double.init)).map { Int($0.rounded()) }
         var crutchTotals: [String: Int] = [:]
         for answer in answers {
             if let word = answer.repeatedWord, let count = answer.repeats { crutchTotals[word, default: 0] += count }

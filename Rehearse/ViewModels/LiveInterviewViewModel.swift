@@ -265,13 +265,20 @@ final class LiveInterviewViewModel {
         }
 
         if !isFollowUp { answeredTurnIDs.append(turn.id) }
+        var turnMeasurements = spoken?.measurements ?? Measurements(wordsPerMinute: 135, fillerWords: 1)
+        let eyePercent = CameraManager.shared.currentEyeContactPercent
+        if eyePercent > 0 {
+            turnMeasurements.eyeContactPercent = eyePercent
+        }
+        CameraManager.shared.resetEyeContactTracking()
+
         transcript.append(TranscriptEntry(
             question: currentQuestion ?? "",
             answer: resolvedAnswerText ?? TranscriptEntry.notTranscribed,
             isFollowUp: isFollowUp,
             // Still the prepared evaluation until answers are judged.
             moment: isFollowUp ? nil : turn.moment,
-            measurements: spoken?.measurements ?? Measurements(wordsPerMinute: 135, fillerWords: 1),
+            measurements: turnMeasurements,
             evaluation: aiEval
         ))
         phase = .captured
@@ -291,11 +298,14 @@ final class LiveInterviewViewModel {
 
         let wordCount = trimmed.split(whereSeparator: \.isWhitespace).count
         let estimatedWpm = min(160, max(110, wordCount * 2))
-        let measurements = Measurements(
+        var measurements = Measurements(
             wordsPerMinute: estimatedWpm,
             fillerWords: 0,
             longPauses: 0
         )
+        if CameraManager.shared.currentEyeContactPercent > 0 {
+            measurements.eyeContactPercent = CameraManager.shared.currentEyeContactPercent
+        }
 
         let input = AIEvaluationInput(
             interview_id: interview.id.uuidString,

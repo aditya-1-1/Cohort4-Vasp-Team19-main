@@ -128,6 +128,27 @@ struct SelfViewTile: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(isTalking ? AppTheme.brand : Color.white.opacity(0.3), lineWidth: isTalking ? 2 : 0.8)
         }
+        .overlay(alignment: .bottomLeading) {
+            if isCameraOn {
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(cameraManager.hasEyeContact ? AppTheme.success : Color.white.opacity(0.35))
+                        .frame(width: 5, height: 5)
+                    Image(systemName: "eye.fill")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(cameraManager.hasEyeContact ? AppTheme.success : Color.white.opacity(0.6))
+                    if cameraManager.hasEyeContact {
+                        Text("Eye Contact")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.horizontal, 5)
+                .padding(.vertical, 3)
+                .background(Color.black.opacity(0.65), in: Capsule())
+                .padding(6)
+            }
+        }
         .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
         .animation(.smooth(duration: 0.25), value: isCameraOn)
         .onAppear {
