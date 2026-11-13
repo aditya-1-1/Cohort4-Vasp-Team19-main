@@ -333,6 +333,29 @@ def call_gemini_evaluation(input_data):
             "\nCOMPANY RUBRIC DIRECTIVE — APPLE:\n"
             "- Explicitly evaluate for deep attention to detail, user privacy, product intuition, software craftsmanship, and cross-functional empathy.\n"
         )
+    elif "netflix" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — NETFLIX:\n"
+            "- Explicitly evaluate for Freedom & Responsibility, extreme autonomy, high performance, and Context Not Control.\n"
+        )
+    elif "microsoft" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — MICROSOFT:\n"
+            "- Explicitly evaluate for Growth Mindset, Customer Empathy, and One Microsoft cross-boundary collaboration.\n"
+        )
+    elif "stripe" in context:
+        company_guidelines = (
+            "\nCOMPANY RUBRIC DIRECTIVE — STRIPE:\n"
+            "- Explicitly evaluate for first-principles reasoning, operational rigor, high written clarity, and extreme thoroughness.\n"
+        )
+    elif "at " in context:
+        detected_company = context.split("at ")[-1].strip()
+        if detected_company:
+            company_guidelines = (
+                f"\nCOMPANY RUBRIC DIRECTIVE — {detected_company.upper()}:\n"
+                f"- Calibrate the evaluation specifically to known engineering culture, technical scale, and interview expectations at {detected_company}.\n"
+                f"- In feedback.what_went_well and feedback.what_to_improve, cite how the answer aligns with {detected_company}'s domain challenges and technical standards.\n"
+            )
 
     user_prompt = (
         f"Evaluate the candidate's answer with senior-level technical discernment and strong reasoning.\n"

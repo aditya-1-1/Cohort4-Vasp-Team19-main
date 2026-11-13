@@ -79,6 +79,7 @@ struct FeedbackReport<PracticeAction: View>: View {
                         let evalRes = rehearsal.evaluation?.evaluation_result
                         NavigationStack {
                             EvaluationSummarySheet(
+                                company: rehearsal.interview?.company,
                                 summary: summary,
                                 whatWentWell: evalRes?.feedback.what_went_well,
                                 whatToImprove: evalRes?.feedback.what_to_improve,
@@ -734,6 +735,7 @@ struct RehearsalDetailView: View {
 }
 
 struct EvaluationSummarySheet: View {
+    var company: String? = nil
     let summary: String
     let whatWentWell: String?
     let whatToImprove: String?
@@ -743,6 +745,20 @@ struct EvaluationSummarySheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                if let company, !company.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "building.2.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.brand)
+                        Text("Target: \(company) • \(CompanyRubricHelper.shortTitle(for: company))")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                     Label("Overall Assessment", systemImage: "sparkles")
                         .font(.headline)

@@ -109,6 +109,17 @@ struct InterviewSetupView: View {
     private var customContext: some View {
         Section {
             LabeledTextField(title: "Company Name", text: $viewModel.company, prompt: "Optional", contentType: .organizationName)
+            if !viewModel.company.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(AppTheme.brand)
+                        .font(.caption)
+                    Text(CompanyRubricHelper.rubricDescription(for: viewModel.company))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            }
             LabeledTextField(title: "Job Role", text: $viewModel.role, prompt: "Enter job role", contentType: .jobTitle)
         }
 
